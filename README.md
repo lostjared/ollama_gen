@@ -9,3 +9,12 @@ cmake ..
 cmake --build .
 sudo cmake --install .
 ```
+
+and after you install the lib you can try the example:
+
+```bash
+cd example
+mkdir build && cd build
+cmake --build .
+./example "localhost" "codellama:7b" "Hello "
+```
