@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
         std::string response = request.generateTextWithCallback([](const std::string &chunk) {
             std::cout << chunk << std::flush; 
         });
-        std::cout << "Complete Response: " << response << std::endl;
+        std::cout << "\n\nComplete Response: " << response << std::endl;
     } catch (const mx::ObjectRequestException &e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;
