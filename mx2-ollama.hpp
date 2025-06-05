@@ -17,7 +17,7 @@ namespace mx {
 
     struct ResponseData {
         std::string response;
-        std::ostringstream shader_stream;
+        std::ostringstream stream;
     };
 
     class ObjectRequestException : public std::exception {

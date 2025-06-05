@@ -50,7 +50,7 @@ namespace mx {
             if (std::regex_search(line, m, re)) {
                 std::string unescaped = ObjectRequest::unescape(m[1].str());
                 std::cout << unescaped;
-                data->shader_stream << unescaped;
+                data->stream << unescaped;
                 std::cout.flush();
             }
         }
@@ -153,6 +153,6 @@ namespace mx {
         }
         
  
-        return response_data.shader_stream.str();
+        return response_data.stream.str();
     }
 }
