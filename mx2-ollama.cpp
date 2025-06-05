@@ -49,7 +49,9 @@ namespace mx {
             
             if (std::regex_search(line, m, re)) {
                 std::string unescaped = ObjectRequest::unescape(m[1].str());
-                std::cout << unescaped;
+                if (data->callback) {
+                    data->callback(unescaped);
+                }
                 data->stream << unescaped;
                 std::cout.flush();
             }
@@ -59,7 +61,16 @@ namespace mx {
         return total_size;
     }
 
-    std::string ObjectRequest::generateCode() {
+    std::string ObjectRequest::generateTextWithCallback(std::function<void(const std::string&)> callback) {
+        if (host.empty() || model.empty() || prompt.empty()) {
+            throw ObjectRequestException("Host, model prompt not set.");
+        }
+        this->cb = callback;
+        std::string response = generateText();   
+        return response;
+    }
+
+    std::string ObjectRequest::generateText() {
         if (host.empty() || model.empty() || prompt.empty()) {
             throw ObjectRequestException("Host, model prompt not set.");
         }
@@ -117,7 +128,7 @@ namespace mx {
 
         CurlRAII curl_raii;
         ResponseData response_data;
-
+        response_data.callback = this->cb;
         std::string url = "http://" + host + ":11434/api/generate";
         curl_easy_setopt(curl_raii.curl, CURLOPT_URL, url.c_str());
         
