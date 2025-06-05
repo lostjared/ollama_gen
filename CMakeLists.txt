@@ -17,19 +17,20 @@ set(HEADERS mx2-ollama.hpp)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(CURL REQUIRED libcurl)
 
-add_library(${LIBRARY_NAME} STATIC ${SOURCES} ${HEADERS})
-target_include_directories(${LIBRARY_NAME} PRIVATE ${CURL_INCLUDE_DIRS})
 
+add_library(${LIBRARY_NAME} STATIC ${SOURCES} ${HEADERS})
+
+target_include_directories(${LIBRARY_NAME} PRIVATE ${CURL_INCLUDE_DIRS})
 target_include_directories(${LIBRARY_NAME} PUBLIC 
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:include>
 )
-
 target_compile_options(${LIBRARY_NAME} PRIVATE ${CURL_CFLAGS_OTHER})
 target_link_libraries(${LIBRARY_NAME} ${CURL_LIBRARIES})
 
-install(TARGETS ${LIBRARY_NAME}
-    EXPORT ollama_gen-targets 
+
+install(TARGETS ${LIBRARY_NAME} 
+    EXPORT ollama_gen-targets
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib
     RUNTIME DESTINATION bin
