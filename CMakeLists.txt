@@ -7,8 +7,12 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 
 if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
+   set(CMAKE_BUILD_TYPE Release)
+   message(STATUS "No build type selected, defaulting to Release")
+else()
+    message(STATUS "Build type selected: ${CMAKE_BUILD_TYPE}")
 endif()
+
 
 set(LIBRARY_NAME ollama_gen)
 set(SOURCES mx2-ollama.cpp)
@@ -17,6 +21,9 @@ set(HEADERS mx2-ollama.hpp)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(CURL REQUIRED libcurl)
 
+message(STATUS "Foud CURL: ${CURL_FOUND}")
+message(STATUS "CURL include dirs: ${CURL_INCLUDE_DIRS}")
+message(STATUS "CURL libraries: ${CURL_LIBRARIES}")
 
 add_library(${LIBRARY_NAME} STATIC ${SOURCES} ${HEADERS})
 
@@ -27,7 +34,6 @@ target_include_directories(${LIBRARY_NAME} PUBLIC
 )
 target_compile_options(${LIBRARY_NAME} PRIVATE ${CURL_CFLAGS_OTHER})
 target_link_libraries(${LIBRARY_NAME} ${CURL_LIBRARIES})
-
 
 install(TARGETS ${LIBRARY_NAME} 
     EXPORT ollama_gen-targets
