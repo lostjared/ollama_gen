@@ -60,8 +60,8 @@ namespace mx {
     }
 
     std::string ObjectRequest::generateCode() {
-        if (host.empty() || model.empty() || filename.empty() || prompt.empty()) {
-            throw ObjectRequestException("Host, model, filename or prompt not set.");
+        if (host.empty() || model.empty() || prompt.empty()) {
+            throw ObjectRequestException("Host, model prompt not set.");
         }
 
         

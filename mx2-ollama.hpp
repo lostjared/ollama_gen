@@ -49,7 +49,6 @@ namespace mx {
     private:
         std::string host;
         std::string model;
-        std::string filename;
         std::string prompt;
     };
 
