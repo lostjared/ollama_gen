@@ -79,12 +79,14 @@ int main(int argc, char **argv) {
             sender1.setPrompt(response2);
             if(!filename.empty()) {
                 file << response2 << " ";
-            }
-            
+            } 
         } catch(mx::ObjectRequestException  &e) {
             std::cerr << "Error: " << e.what() << "\n";
             break;
-        }
+        } catch(const std::exception &e) {
+            std::cerr << "Unexpected error: " << e.what() << "\n";
+            break;
+        }   
     }
     
     if(!filename.empty()) {
