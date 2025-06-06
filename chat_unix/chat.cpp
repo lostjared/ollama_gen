@@ -2,9 +2,9 @@
 #include<fstream>
 #include<csignal>
 #include<atomic>
+#include<regex>
 
 std::atomic<bool> keep_running(true);
-
 
 void signal_handler(int signal) {
     if (signal == SIGINT) {
@@ -12,6 +12,23 @@ void signal_handler(int signal) {
         keep_running = false;
     }
 }
+
+std::string newLine(const std::string& text) {
+    std::string result = text;
+    size_t pos = 0;
+    while ((pos = result.find('\n', pos)) != std::string::npos) {
+        result.replace(pos, 1, "<br>");
+        pos += 4; 
+    }
+    return result;
+}
+
+std::string processThinkTags(const std::string& text) {
+    std::regex think_regex(R"(<think>([\s\S]*?)</think>)", std::regex_constants::icase);
+    std::string result = std::regex_replace(text, think_regex, "<i>$1</i>"); 
+    return result;
+}
+
 
 int main(int argc, char **argv) {
     if(argc < 5) {
@@ -49,9 +66,17 @@ int main(int argc, char **argv) {
         file << "<html>\n";
         file << "<head>\n";
         file << "<title>Chat between " << m1 << " and " << m2 << "</title>\n";
+        file << "<style>\n";
+        file << "body { font-family: Arial, sans-serif; margin: 20px; }\n";
+        file << ".model1-box { background-color: #e6f3ff; border: 1px solid #b3d9ff; border-radius: 8px; padding: 15px; margin: 10px 0; }\n";
+        file << ".model2-box { background-color: #f0f0f0; border: 1px solid #cccccc; border-radius: 8px; padding: 15px; margin: 10px 0; }\n";
+        file << ".model-name { font-weight: bold; margin-bottom: 8px; }\n";
+        file << ".model1-name { color: #0066cc; }\n";
+        file << ".model2-name { color: #666666; }\n";
+        file << "</style>\n";
         file << "</head>\n";
         file << "<body>\n";
-        file << "Chat between <b>" << m1 << "</b> and <b>" << m2 << "</b>\n";
+        file << "<h1>Chat between " << m1 << " and " << m2 << "</h1>\n";
     }
 
     while(keep_running) {
@@ -59,26 +84,33 @@ int main(int argc, char **argv) {
             if (!keep_running) break;
             std::cout << "\n" << m1 << ": ";
             if(!filename.empty()) {
-                file << "<br><b><span style=\"color:blue;\">" << m1 << ":</span></b> ";
+                file << "<div class=\"model1-box\">\n";
+                file << "<div class=\"model-name model1-name\">" << m1 << ":</div>\n";
             }
             std::string response1 = sender1.generateTextWithCallback([](const std::string &text) {
                 std::cout << text;
             });
             if(!filename.empty()) {
-                file << response1 << " ";
+                std::string processed = processThinkTags(response1);
+                file << newLine(processed) << "<br>";
+                file << "</div>\n<br>";
             }   
             if (!keep_running) break;
             sender2.setPrompt(response1);
             std::cout << "\n" << m2 << ": ";
             if(!filename.empty()) {
-                file << "<br><b><span style=\"color:red;\">" << m2 << ":</span></b> ";
+                file << "<div class=\"model2-box\">\n";
+                file << "<div class=\"model-name model2-name\">" << m2 << ":</div>\n";
             }
             std::string response2 = sender2.generateTextWithCallback([](const std::string &text) {
                 std::cout << text;
             });
             sender1.setPrompt(response2);
             if(!filename.empty()) {
-                file << response2 << " ";
+                std::string processed = processThinkTags(response2);
+                file << newLine(processed) << "<br>\n";
+                file << "</div>\n<br>";
+                file.flush(); 
             } 
         } catch(mx::ObjectRequestException  &e) {
             std::cerr << "Error: " << e.what() << "\n";
@@ -90,7 +122,7 @@ int main(int argc, char **argv) {
     }
     
     if(!filename.empty()) {
-        file << "<br><b>End of chat</b>\n";
+        file << "<div style=\"text-align: center; margin-top: 30px; font-weight: bold; color: #666;\">End of chat</div>\n";
         file << "</body>\n";
         file << "</html>\n";
         file.close();
