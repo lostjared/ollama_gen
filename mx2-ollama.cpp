@@ -129,7 +129,11 @@ namespace mx {
         CurlRAII curl_raii;
         ResponseData response_data;
         response_data.callback = this->cb;
-        std::string url = "http://" + host + ":11434/api/generate";
+
+        if(host.find(":") == std::string::npos) {
+            host += ":11434"; 
+        }
+        std::string url = "http://" + host + "/api/generate";
         curl_easy_setopt(curl_raii.curl, CURLOPT_URL, url.c_str());
         
         std::string json_data = payload.str();
