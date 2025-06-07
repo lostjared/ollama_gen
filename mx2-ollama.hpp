@@ -10,14 +10,14 @@
 #include <fstream>
 #include <algorithm>    
 #include <cctype>
-
+#include <functional>
+#include <exception>
 
 namespace mx {
-
-
     struct ResponseData {
         std::string response;
         std::ostringstream stream;
+        std::function<void(const std::string&)> callback = nullptr;
     };
 
     class ObjectRequestException : public std::exception {
@@ -44,12 +44,14 @@ namespace mx {
             prompt = prompt_;
         }
         static std::string unescape(const std::string &input);
-        std::string generateCode();
+        std::string generateText();
+        std::string generateTextWithCallback(std::function<void(const std::string&)> callback);
         static size_t WriteCallback(void* contents, size_t size, size_t nmemb, ResponseData* data);
     private:
         std::string host;
         std::string model;
         std::string prompt;
+        std::function<void(const std::string&)> cb = nullptr;
     };
 
 
