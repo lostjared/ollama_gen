@@ -8,7 +8,7 @@ std::atomic<bool> keep_running(true);
 
 void signal_handler(int signal) {
     if (signal == SIGINT) {
-        std::cout << "\n\nReceived Ctrl+C, shutting down gracefully...\n";
+        std::cout << "\n\nReceived Ctrl+C, shutting down gracefully please be patient...\n";
         keep_running = false;
     }
 }
@@ -32,11 +32,11 @@ std::string processThinkTags(const std::string& text) {
 
 int main(int argc, char **argv) {
     if(argc < 5) {
-        std::cerr << "Usage: " << argv[0] << " <host> <model1> <model2> <seed>\n";
+        std::cerr << "Usage: " << argv[0] << " <host> <model1> <model2> <seed> <filename>\n";
         return 1;
     }
     std::cout << "Press Ctrl+C to stop the chat.\n";
-    std::cout << "Be pateint, the models need time to respond.\n";
+    std::cout << "Be pateint, the models need time to finish their response.\n";
     std::signal(SIGINT, signal_handler);    
     std::string filename;
     if(argc > 5) {
