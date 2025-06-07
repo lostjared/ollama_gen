@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ai Chat Unix Tool - AI Model Conversation Interface</title>
+    <meta property="og:title" content="Ai Chat Unix Tool - AI Model Conversation Interface">
+    <meta property="og:description" content="A powerful command-line application that facilitates conversations between two AI models using the ollama_gen library. Create dynamic dialogues and save them as styled HTML files.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://lostsidedead.biz/chat_unix">
+    <meta property="og:site_name" content="Ai Chat Unix Tool">
+    <meta property="og:locale" content="en_US">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d1b1b 50%, #1a1a1a 100%);
+            color: #e0e0e0;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 40px 0;
+            background: linear-gradient(45deg, #8B0000, #DC143C);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(220, 20, 60, 0.3);
+        }
+
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            color: #f0f0f0;
+            font-weight: 300;
+        }
+
+        .section {
+            background: rgba(30, 30, 30, 0.8);
+            border: 2px solid #8B0000;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 30px 0;
+            box-shadow: 0 4px 20px rgba(139, 0, 0, 0.2);
+        }
+
+        h2 {
+            color: #DC143C;
+            font-size: 2em;
+            margin-bottom: 20px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .arguments-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: rgba(20, 20, 20, 0.9);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .arguments-table th {
+            background: linear-gradient(45deg, #8B0000, #DC143C);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .arguments-table td {
+            padding: 15px;
+            border-bottom: 1px solid #444;
+            color: #e0e0e0;
+        }
+
+        .arguments-table tr:hover {
+            background: rgba(139, 0, 0, 0.1);
+            transition: background 0.3s ease;
+        }
+
+        .code-block {
+            background: #1a1a1a;
+            border: 1px solid #8B0000;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            color: #00ff00;
+            overflow-x: auto;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        .highlight {
+            color: #DC143C;
+            font-weight: bold;
+        }
+
+        .example {
+            background: rgba(220, 20, 60, 0.1);
+            border-left: 4px solid #DC143C;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .feature-card {
+            background: rgba(139, 0, 0, 0.1);
+            border: 1px solid #8B0000;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(220, 20, 60, 0.3);
+        }
+
+        .feature-icon {
+            font-size: 2.5em;
+            color: #DC143C;
+            margin-bottom: 15px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 30px;
+            background: rgba(139, 0, 0, 0.2);
+            border-radius: 12px;
+            color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Ai Chat Unix Tool</h1>
+            <p class="subtitle">AI Model Conversation Interface using Ollama</p>
+        </header>
+
+        <div class="section">
+            <h2>🤖 Overview</h2>
+            <p>The Chat Unix Tool is a powerful command-line application that facilitates conversations between two AI models using the ollama_gen library. It creates dynamic dialogues where models respond to each other, generating engaging conversations that can be saved as HTML files.</p>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">💬</div>
+                    <h3>Interactive Chat</h3>
+                    <p>Real-time conversation between two AI models</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📄</div>
+                    <h3>HTML Export</h3>
+                    <p>Save conversations as styled HTML files</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Seeded Prompts</h3>
+                    <p>Control conversation direction with initial seeds</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Real-time Output</h3>
+                    <p>Watch conversations unfold in real-time</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📋 Command Arguments</h2>
+            <table class="arguments-table">
+                <thead>
+                    <tr>
+                        <th>Argument</th>
+                        <th>Position</th>
+                        <th>Required</th>
+                        <th>Description</th>
+                        <th>Example</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="highlight">&lt;host&gt;</span></td>
+                        <td>1</td>
+                        <td>✅ Yes</td>
+                        <td>Ollama server host address</td>
+                        <td>localhost:11434</td>
+                    </tr>
+                    <tr>
+                        <td><span class="highlight">&lt;model1&gt;</span></td>
+                        <td>2</td>
+                        <td>✅ Yes</td>
+                        <td>First AI model name</td>
+                        <td>qwen3, llama3, mistral</td>
+                    </tr>
+                    <tr>
+                        <td><span class="highlight">&lt;model2&gt;</span></td>
+                        <td>3</td>
+                        <td>✅ Yes</td>
+                        <td>Second AI model name</td>
+                        <td>deepseek-r1, codegemma</td>
+                    </tr>
+                    <tr>
+                        <td><span class="highlight">&lt;seed&gt;</span></td>
+                        <td>4</td>
+                        <td>✅ Yes</td>
+                        <td>Initial conversation prompt/topic</td>
+                        <td>"Explain quantum computing"</td>
+                    </tr>
+                    <tr>
+                        <td><span class="highlight">&lt;filename&gt;</span></td>
+                        <td>5</td>
+                        <td>❌ Optional</td>
+                        <td>Output HTML file path</td>
+                        <td>chat.html, conversation.html</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>🚀 Usage Examples</h2>
+            
+            <div class="example">
+                <h3>Basic Usage (Console Only)</h3>
+                <div class="code-block">
+./chat_unix localhost:11434 qwen3:latest deepseek-r1:latest "Why is C++ the best programming language?"
+                </div>
+                <p>This will start a conversation between qwen3 and deepseek-r1 about C++ programming, displaying output only in the console.</p>
+            </div>
+
+            <div class="example">
+                <h3>With HTML Output</h3>
+                <div class="code-block">
+./chat_unix localhost:11434 llama3:latest mistral:latest "Discuss artificial intelligence ethics" ai_ethics.html
+                </div>
+                <p>This saves the conversation to an HTML file with styled formatting for easy reading and sharing.</p>
+            </div>
+
+            <div class="example">
+                <h3>Creative Writing Session</h3>
+                <div class="code-block">
+./chat_unix localhost:11434 qwen3:latest codegemma "Write a collaborative short story about space exploration" story.html
+                </div>
+                <p>Models will collaborate on creative writing, with the full conversation saved as an HTML document.</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🛠️ Building and Installation</h2>
+            <div class="code-block"><pre><code># Clone the repository
+git clone https://github.com/lostjared/ollama_gen.git
+# Navigate to the ollama_gen directory
+cd ollama_gen
+# Ensure you have CMake installed
+# Install dependencies (if needed)
+sudo apt-get install cmake g++ libcurl4-openssl-dev 
+# Create a build directory
+mkdir build && cd build
+# Configure the project
+cmake ..
+# Build the project
+cmake --build .        
+#  install the library
+sudo cmake --install .
+
+# Navigate to the chat_unix directory
+cd chat_unix
+
+# Create build directory
+mkdir build && cd build
+
+# Configure and build
+cmake ..
+cmake --build .
+# Run the application
+./chat_unix &lt;host&gt; &lt;model1&gt; &lt;model2&gt; &lt;seed&gt; [filename]
+</code></pre>
+            </div>
+        </div>
+        <div class="section">
+            <h2>⚠️ Important Notes</h2>
+            <ul style="list-style-type: none; padding-left: 0;">
+                <li style="margin: 10px 0; padding: 10px; background: rgba(220, 20, 60, 0.1); border-left: 3px solid #DC143C;">
+                    <strong>🔧 Prerequisites:</strong> Ensure Ollama server is running and accessible at the specified host
+                </li>
+                <li style="margin: 10px 0; padding: 10px; background: rgba(220, 20, 60, 0.1); border-left: 3px solid #DC143C;">
+                    <strong>🤖 Models:</strong> Both specified models must be available in your Ollama installation
+                </li>
+                <li style="margin: 10px 0; padding: 10px; background: rgba(220, 20, 60, 0.1); border-left: 3px solid #DC143C;">
+                    <strong>⏹️ Stopping:</strong> Press Ctrl+C to gracefully stop the conversation at any time
+                </li>
+                <li style="margin: 10px 0; padding: 10px; background: rgba(220, 20, 60, 0.1); border-left: 3px solid #DC143C;">
+                    <strong>⏳ Patience:</strong> AI models need time to process and respond - responses may take several seconds
+                </li>
+            </ul>
+        </div>
+
+        <footer>
+            <p>Built with the ollama_gen library | <span class="highlight">AI-Powered Conversations</span></p>
+        </footer>
+    </div>
+</body>
+</html>
