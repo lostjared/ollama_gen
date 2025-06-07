@@ -68,11 +68,11 @@ int main(int argc, char **argv) {
         file << "<title>Chat between " << m1 << " and " << m2 << "</title>\n";
         file << "<style>\n";
         file << "body { font-family: Arial, sans-serif; margin: 20px; }\n";
-        file << ".model1-box { background-color: #e6f3ff; border: 1px solid #b3d9ff; border-radius: 8px; padding: 15px; margin: 10px 0; }\n";
-        file << ".model2-box { background-color: #f0f0f0; border: 1px solid #cccccc; border-radius: 8px; padding: 15px; margin: 10px 0; }\n";
+        file << ".model1-box { background-color:rgb(127, 177, 224); border: 1px solid:rgb(169, 186, 202); border-radius: 8px; padding: 15px; margin: 10px 0; }\n";
+        file << ".model2-box { background-color:rgb(230, 126, 126); border: 1px solid: rgb(162, 117, 117); border-radius: 8px; padding: 15px; margin: 10px 0; }\n";
         file << ".model-name { font-weight: bold; margin-bottom: 8px; }\n";
-        file << ".model1-name { color: #0066cc; }\n";
-        file << ".model2-name { color: #666666; }\n";
+        file << ".model1-name { color:rgb(7, 24, 42); }\n";
+        file << ".model2-name { color:rgb(55, 17, 17); }\n";
         file << "</style>\n";
         file << "</head>\n";
         file << "<body>\n";
