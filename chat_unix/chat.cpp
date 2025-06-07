@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
         file << "<!DOCTYPE html>\n";
         file << "<html>\n";
         file << "<head>\n";
-        file << "<title>Chat between " << m1 << " and " << m2 << "</title>\n";
+        file << "<title>Chat between " << m1 << " and " << m2 << " about: " << seed << "</title>\n";
         file << "<style>\n";
         file << "body { font-family: Arial, sans-serif; margin: 20px; }\n";
         file << ".model1-box { background-color:rgb(127, 177, 224); border: 1px solid:rgb(169, 186, 202); border-radius: 8px; padding: 15px; margin: 10px 0; }\n";
@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
         file << "</style>\n";
         file << "</head>\n";
         file << "<body>\n";
-        file << "<h1>Chat between " << m1 << " and " << m2 << "</h1>\n";
+        file << "<h1>Chat between " << m1 << " and " << m2 << " about: " << seed << "</h1>\n";
     }
 
     while(keep_running) {
