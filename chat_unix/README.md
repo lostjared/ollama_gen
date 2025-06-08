@@ -12,7 +12,7 @@ A command-line AI chat application for Linux and Unix systems.
 ## Usage
 
 ```bash
-chat_unix host model1 mode2l "seed string" filename.html
+chat_unix host model1 model2 "seed string" filename.html
 ```
 
 ## Requirements
