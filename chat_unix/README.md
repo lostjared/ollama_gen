@@ -19,6 +19,7 @@ chat_unix host model1 mode2l "seed string" filename.html
 
 - Linux or Unix operating system
 - Terminal/shell access
+- ollama_gen installed
 
 ## License
 
