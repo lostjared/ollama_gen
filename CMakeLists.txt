@@ -26,6 +26,9 @@ message(STATUS "CURL include dirs: ${CURL_INCLUDE_DIRS}")
 message(STATUS "CURL libraries: ${CURL_LIBRARIES}")
 
 add_library(${LIBRARY_NAME} STATIC ${SOURCES} ${HEADERS})
+set_target_properties(${LIBRARY_NAME} PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+)
 
 target_include_directories(${LIBRARY_NAME} PRIVATE ${CURL_INCLUDE_DIRS})
 target_include_directories(${LIBRARY_NAME} PUBLIC 
