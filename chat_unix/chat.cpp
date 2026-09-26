@@ -1,5 +1,6 @@
 #include<mx2-ollama.hpp>
 #include<fstream>
+#include<iostream>
 #include<csignal>
 #include<atomic>
 #include<regex>

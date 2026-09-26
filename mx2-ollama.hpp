@@ -2,20 +2,16 @@
 #define __MX2_OLLAMA_HPP__
 
 
-#include <curl/curl.h>
-#include <iostream>
-#include <string>
-#include <sstream>
-#include <regex>
-#include <fstream>
-#include <algorithm>    
-#include <cctype>
-#include <functional>
 #include <exception>
+#include <functional>
+#include <sstream>
+#include <string>
 
 namespace mx {
     struct ResponseData {
         std::string response;
+        std::string pending;
+        std::string error;
         std::ostringstream stream;
         std::function<void(const std::string&)> callback = nullptr;
     };
@@ -43,7 +39,6 @@ namespace mx {
         void setPrompt(const std::string &prompt_) {
             prompt = prompt_;
         }
-        static std::string unescape(const std::string &input);
         std::string generateText();
         std::string generateTextWithCallback(std::function<void(const std::string&)> callback);
         static size_t WriteCallback(void* contents, size_t size, size_t nmemb, ResponseData* data);

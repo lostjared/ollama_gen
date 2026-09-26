@@ -1,7 +1,7 @@
 # ollama_gen
-Query a prompt to an LLM in Ollama using libcurl.
+Query a prompt to an LLM in Ollama using libcurl and jsoncpp.
 
-To compile install libcurl then:
+To compile, install the libcurl and jsoncpp development packages, then:
 
 ```bash
 mkdir build && cd build
@@ -45,4 +45,4 @@ int main(int argc, char **argv) {
     }   
     return 0;
 }
-````
+```

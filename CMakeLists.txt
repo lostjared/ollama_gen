@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project(ollama_gen)
 
+include(CTest)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
@@ -19,24 +21,34 @@ set(SOURCES mx2-ollama.cpp)
 set(HEADERS mx2-ollama.hpp)
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(CURL REQUIRED libcurl)
+pkg_check_modules(CURL REQUIRED IMPORTED_TARGET libcurl)
+pkg_check_modules(JSONCPP REQUIRED IMPORTED_TARGET jsoncpp)
 
-message(STATUS "Foud CURL: ${CURL_FOUND}")
+message(STATUS "Found CURL: ${CURL_FOUND}")
 message(STATUS "CURL include dirs: ${CURL_INCLUDE_DIRS}")
 message(STATUS "CURL libraries: ${CURL_LIBRARIES}")
+message(STATUS "Found jsoncpp: ${JSONCPP_VERSION}")
 
 add_library(${LIBRARY_NAME} STATIC ${SOURCES} ${HEADERS})
 set_target_properties(${LIBRARY_NAME} PROPERTIES
     POSITION_INDEPENDENT_CODE ON
 )
 
-target_include_directories(${LIBRARY_NAME} PRIVATE ${CURL_INCLUDE_DIRS})
 target_include_directories(${LIBRARY_NAME} PUBLIC 
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:include>
 )
-target_compile_options(${LIBRARY_NAME} PRIVATE ${CURL_CFLAGS_OTHER})
-target_link_libraries(${LIBRARY_NAME} ${CURL_LIBRARIES})
+target_link_libraries(${LIBRARY_NAME}
+    PRIVATE
+        PkgConfig::CURL
+        PkgConfig::JSONCPP
+)
+
+if(BUILD_TESTING)
+    add_executable(ollama_gen_json_test tests/json_stream_test.cpp)
+    target_link_libraries(ollama_gen_json_test PRIVATE ${LIBRARY_NAME})
+    add_test(NAME ollama_gen_json_stream COMMAND ollama_gen_json_test)
+endif()
 
 install(TARGETS ${LIBRARY_NAME} 
     EXPORT ollama_gen-targets

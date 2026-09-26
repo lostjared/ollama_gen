@@ -1,63 +1,67 @@
 #include "mx2-ollama.hpp"
 
+#include <curl/curl.h>
+#include <json/json.h>
+
+#include <memory>
+
 namespace mx {
+    namespace {
+        bool processResponseLine(const std::string& line, ResponseData& data) {
+            if (line.empty()) {
+                return true;
+            }
 
-   
-    std::string ObjectRequest::unescape(const std::string &input) {
-        std::string s = input;  
-        
-        size_t pos = 0;
-        while ((pos = s.find("\\n", pos)) != std::string::npos) {
-            s.replace(pos, 2, "\n");
-            pos += 1;
-        }
-        
-        pos = 0;
-        while ((pos = s.find("\\t", pos)) != std::string::npos) {
-            s.replace(pos, 2, "\t");
-            pos += 1;
-        }
-        
-        pos = 0;
-        while ((pos = s.find("\\r", pos)) != std::string::npos) {
-            s.replace(pos, 2, "\r");
-            pos += 1;
-        }
+            Json::CharReaderBuilder builder;
+            std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+            Json::Value object;
+            std::string errors;
+            if (!reader->parse(line.data(), line.data() + line.size(), &object, &errors)) {
+                data.error = "Failed to parse Ollama JSON response: " + errors;
+                return false;
+            }
 
-        std::regex unicode_regex(R"(\\u([0-9a-fA-F]{4}))");
-        std::smatch match;
-        while (std::regex_search(s, match, unicode_regex)) {
-            int code = std::stoi(match[1].str(), nullptr, 16);
-            char replacement = static_cast<char>(code);
-            s.replace(match.position(), match.length(), 1, replacement);
+            if (object.isMember("error")) {
+                data.error = "Ollama API error: " + object["error"].asString();
+                return false;
+            }
+
+            const Json::Value& response = object["response"];
+            if (!response.isNull()) {
+                if (!response.isString()) {
+                    data.error = "Invalid Ollama JSON response: 'response' is not a string";
+                    return false;
+                }
+                const std::string text = response.asString();
+                if (data.callback) {
+                    data.callback(text);
+                }
+                data.stream << text;
+            }
+            return true;
         }
-        return s;
     }
 
     size_t ObjectRequest::WriteCallback(void* contents, size_t size, size_t nmemb, ResponseData* data) {
         if (!data) return 0; 
         
         size_t total_size = size * nmemb;
-        std::string chunk(static_cast<char*>(contents), total_size);
-        
-        std::istringstream stream(chunk);
-        std::string line;
-        
-        while (std::getline(stream, line)) {
-            static const std::regex re(R"REGEX("response"\s*:\s*"([^"]*)")REGEX");
-            std::smatch m;
-            
-            if (std::regex_search(line, m, re)) {
-                std::string unescaped = ObjectRequest::unescape(m[1].str());
-                if (data->callback) {
-                    data->callback(unescaped);
-                }
-                data->stream << unescaped;
-                std::cout.flush();
+        const std::string chunk(static_cast<char*>(contents), total_size);
+        data->response += chunk;
+        data->pending += chunk;
+
+        size_t newline;
+        while ((newline = data->pending.find('\n')) != std::string::npos) {
+            std::string line = data->pending.substr(0, newline);
+            data->pending.erase(0, newline + 1);
+            if (!line.empty() && line.back() == '\r') {
+                line.pop_back();
+            }
+            if (!processResponseLine(line, *data)) {
+                return 0;
             }
         }
-        
-        data->response += chunk;
+
         return total_size;
     }
 
@@ -75,28 +79,12 @@ namespace mx {
             throw ObjectRequestException("Host, model prompt not set.");
         }
 
-        
-        std::ostringstream payload;
-        payload << "{"
-                << "\"model\":\"" << model << "\","
-                << "\"prompt\":\"";
-        
-        
-        std::string escaped_prompt;
-        escaped_prompt.reserve(prompt.length() * 1.2); 
-        
-        for (char c : prompt) {
-            switch (c) {
-                case '"':  escaped_prompt += "\\\""; break;
-                case '\\': escaped_prompt += "\\\\"; break;
-                case '\n': escaped_prompt += "\\n"; break;
-                case '\r': escaped_prompt += "\\r"; break;
-                case '\t': escaped_prompt += "\\t"; break;
-                default:   escaped_prompt += c; break;
-            }
-        }
-        
-        payload << escaped_prompt << "\"}";
+        Json::Value request(Json::objectValue);
+        request["model"] = model;
+        request["prompt"] = prompt;
+        Json::StreamWriterBuilder writer;
+        writer["indentation"] = "";
+        const std::string json_data = Json::writeString(writer, request);
 
         
         struct CurlRAII {
@@ -136,7 +124,6 @@ namespace mx {
         std::string url = "http://" + host + "/api/generate";
         curl_easy_setopt(curl_raii.curl, CURLOPT_URL, url.c_str());
         
-        std::string json_data = payload.str();
         curl_easy_setopt(curl_raii.curl, CURLOPT_POSTFIELDS, json_data.c_str());
         curl_easy_setopt(curl_raii.curl, CURLOPT_POSTFIELDSIZE, static_cast<long>(json_data.length()));
         
@@ -155,7 +142,15 @@ namespace mx {
         CURLcode res = curl_easy_perform(curl_raii.curl);
         
         if (res != CURLE_OK) {
+            if (!response_data.error.empty()) {
+                throw ObjectRequestException(response_data.error);
+            }
             throw ObjectRequestException("curl_easy_perform() failed: " + std::string(curl_easy_strerror(res)));
+        }
+
+        if (!response_data.pending.empty() &&
+            !processResponseLine(response_data.pending, response_data)) {
+            throw ObjectRequestException(response_data.error);
         }
         
  
