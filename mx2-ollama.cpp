@@ -181,16 +181,26 @@ namespace mx {
         }
 
         std::string makeBody(Provider provider, const std::string& model,
+                             const std::string& instructions,
                              const std::string& prompt, unsigned int maxTokens) {
             Json::Value request(Json::objectValue);
             request["model"] = model;
             request["stream"] = true;
             if (provider == Provider::Ollama) {
+                if (!instructions.empty()) {
+                    request["system"] = instructions;
+                }
                 request["prompt"] = prompt;
             } else if (provider == Provider::OpenAI) {
+                if (!instructions.empty()) {
+                    request["instructions"] = instructions;
+                }
                 request["input"] = prompt;
             } else {
                 request["max_tokens"] = maxTokens;
+                if (!instructions.empty()) {
+                    request["system"] = instructions;
+                }
                 Json::Value message(Json::objectValue);
                 message["role"] = "user";
                 message["content"] = prompt;
@@ -207,6 +217,27 @@ namespace mx {
                 throw ObjectRequestException("Failed to create HTTP headers");
             }
             headers = updated;
+        }
+
+        class CurlGlobal {
+          public:
+            CurlGlobal() {
+                if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
+                    throw ObjectRequestException("Failed to initialize curl globally");
+                }
+            }
+
+            ~CurlGlobal() {
+                curl_global_cleanup();
+            }
+
+            CurlGlobal(const CurlGlobal&) = delete;
+            CurlGlobal& operator=(const CurlGlobal&) = delete;
+        };
+
+        CurlGlobal& curlGlobal() {
+            static CurlGlobal instance;
+            return instance;
         }
     }
 
@@ -240,15 +271,15 @@ namespace mx {
     }
 
     std::string ObjectRequest::generateTextWithCallback(std::function<void(const std::string&)> callback) {
-        if (host.empty() || model.empty() || prompt.empty()) {
-            throw ObjectRequestException("Host, model, or prompt not set.");
-        }
-        this->cb = callback;
-        std::string response = generateText();   
-        return response;
+        return generateTextImpl(std::move(callback));
     }
 
     std::string ObjectRequest::generateText() {
+        return generateTextImpl(nullptr);
+    }
+
+    std::string ObjectRequest::generateTextImpl(
+        std::function<void(const std::string&)> callback) {
         if (host.empty() || model.empty() || prompt.empty()) {
             throw ObjectRequestException("Host, model, or prompt not set.");
         }
@@ -266,7 +297,8 @@ namespace mx {
             apiKey = value;
         }
 
-        const std::string json_data = makeBody(provider, model, prompt, maxTokens);
+        const std::string json_data = makeBody(
+            provider, model, instructions, prompt, maxTokens);
 
         
         struct CurlRAII {
@@ -274,10 +306,9 @@ namespace mx {
             curl_slist* headers;
             
             CurlRAII() : curl(nullptr), headers(nullptr) {
-                curl_global_init(CURL_GLOBAL_DEFAULT);
+                (void)curlGlobal();
                 curl = curl_easy_init();
                 if (!curl) {
-                    curl_global_cleanup();
                     throw ObjectRequestException("Failed to initialize curl");
                 }
             }
@@ -289,7 +320,6 @@ namespace mx {
                 if (curl) {
                     curl_easy_cleanup(curl);
                 }
-                curl_global_cleanup();
             }
             
             CurlRAII(const CurlRAII&) = delete;
@@ -299,7 +329,7 @@ namespace mx {
         CurlRAII curl_raii;
         ResponseData response_data;
         response_data.provider = provider;
-        response_data.callback = this->cb;
+        response_data.callback = std::move(callback);
 
         const std::string url = makeUrl(provider, host);
         curl_easy_setopt(curl_raii.curl, CURLOPT_URL, url.c_str());

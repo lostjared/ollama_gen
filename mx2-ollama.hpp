@@ -46,6 +46,9 @@ namespace mx {
         void setModel(const std::string &model_) {
             model = model_;
         }
+        void setInstructions(const std::string &instructions_) {
+            instructions = instructions_;
+        }
         void setPrompt(const std::string &prompt_) {
             prompt = prompt_;
         }
@@ -59,9 +62,10 @@ namespace mx {
         Provider provider;
         std::string host;
         std::string model;
+        std::string instructions;
         std::string prompt;
         unsigned int maxTokens = 1024;
-        std::function<void(const std::string&)> cb = nullptr;
+        std::string generateTextImpl(std::function<void(const std::string&)> callback);
     };
 
 

@@ -33,6 +33,7 @@ int main(int argc, char **argv) {
     std::string model = argv[2];
     std::string prompt = argv[3];
     mx::ObjectRequest request(host, model);
+    request.setInstructions("You are a concise coding assistant.");
     request.setPrompt(prompt);
     try {
         std::string response = request.generateTextWithCallback([](const std::string &chunk) {
@@ -63,6 +64,7 @@ export ANTHROPIC_API_KEY="your_anthropic_api_key"
 
 int main() {
     mx::ObjectRequest request(mx::Provider::OpenAI, "your-openai-model");
+    request.setInstructions("You are a concise coding assistant.");
     request.setPrompt("Hello from C++");
     request.generateTextWithCallback([](const std::string& text) {
         std::cout << text << std::flush;
@@ -78,9 +80,14 @@ mx::ObjectRequest request(
     "your-anthropic-model"
 );
 request.setMaxTokens(2048);
+request.setInstructions("You are a concise coding assistant.");
 request.setPrompt("Hello from C++");
 std::string response = request.generateText();
 ```
+
+`setInstructions()` sends persistent guidance through each provider's native
+system/instructions field. `setPrompt()` contains only the input for the current
+request; `ObjectRequest` does not retain conversation history between calls.
 
 An optional third constructor argument overrides the provider base URL for a
 proxy or compatible endpoint. OpenAI defaults to `https://api.openai.com`,
