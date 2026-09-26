@@ -48,6 +48,9 @@ if(BUILD_TESTING)
     add_executable(ollama_gen_json_test tests/json_stream_test.cpp)
     target_link_libraries(ollama_gen_json_test PRIVATE ${LIBRARY_NAME})
     add_test(NAME ollama_gen_json_stream COMMAND ollama_gen_json_test)
+    set_tests_properties(ollama_gen_json_stream PROPERTIES
+        ENVIRONMENT "OPENAI_API_KEY=;ANTHROPIC_API_KEY="
+    )
 endif()
 
 install(TARGETS ${LIBRARY_NAME} 

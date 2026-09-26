@@ -1,5 +1,5 @@
 # ollama_gen
-Query a prompt to an LLM in Ollama using libcurl and jsoncpp.
+Query a prompt using Ollama, OpenAI, or Anthropic with libcurl and jsoncpp.
 
 To compile, install the libcurl and jsoncpp development packages, then:
 
@@ -46,3 +46,43 @@ int main(int argc, char **argv) {
     return 0;
 }
 ```
+
+## Cloud providers
+
+Cloud providers use their streaming HTTP APIs and load credentials from the
+environment. Set the appropriate variable before running the application:
+
+```bash
+export OPENAI_API_KEY="your_openai_api_key"
+export ANTHROPIC_API_KEY="your_anthropic_api_key"
+```
+
+```cpp
+#include <iostream>
+#include <mx2-ollama.hpp>
+
+int main() {
+    mx::ObjectRequest request(mx::Provider::OpenAI, "your-openai-model");
+    request.setPrompt("Hello from C++");
+    request.generateTextWithCallback([](const std::string& text) {
+        std::cout << text << std::flush;
+    });
+}
+```
+
+Anthropic uses the same interface:
+
+```cpp
+mx::ObjectRequest request(
+    mx::Provider::Anthropic,
+    "your-anthropic-model"
+);
+request.setMaxTokens(2048);
+request.setPrompt("Hello from C++");
+std::string response = request.generateText();
+```
+
+An optional third constructor argument overrides the provider base URL for a
+proxy or compatible endpoint. OpenAI defaults to `https://api.openai.com`,
+Anthropic defaults to `https://api.anthropic.com`, and the original Ollama
+constructor remains unchanged.

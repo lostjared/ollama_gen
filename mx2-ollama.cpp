@@ -3,20 +3,65 @@
 #include <curl/curl.h>
 #include <json/json.h>
 
+#include <cstdlib>
 #include <memory>
+#include <utility>
 
 namespace mx {
     namespace {
-        bool processResponseLine(const std::string& line, ResponseData& data) {
+        const char* providerName(Provider provider) {
+            switch (provider) {
+                case Provider::Ollama: return "Ollama";
+                case Provider::OpenAI: return "OpenAI";
+                case Provider::Anthropic: return "Anthropic";
+            }
+            return "unknown provider";
+        }
+
+        const char* apiKeyEnvironmentVariable(Provider provider) {
+            switch (provider) {
+                case Provider::OpenAI: return "OPENAI_API_KEY";
+                case Provider::Anthropic: return "ANTHROPIC_API_KEY";
+                case Provider::Ollama: return nullptr;
+            }
+            return nullptr;
+        }
+
+        std::string defaultHost(Provider provider) {
+            switch (provider) {
+                case Provider::Ollama: return "localhost";
+                case Provider::OpenAI: return "https://api.openai.com";
+                case Provider::Anthropic: return "https://api.anthropic.com";
+            }
+            return {};
+        }
+
+        bool parseJson(const std::string& text, Json::Value& object, std::string& error) {
+            Json::CharReaderBuilder builder;
+            std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+            std::string errors;
+            if (!reader->parse(text.data(), text.data() + text.size(), &object, &errors)) {
+                error = errors;
+                return false;
+            }
+            return true;
+        }
+
+        void appendText(const std::string& text, ResponseData& data) {
+            if (data.callback) {
+                data.callback(text);
+            }
+            data.stream << text;
+        }
+
+        bool processOllamaLine(const std::string& line, ResponseData& data) {
             if (line.empty()) {
                 return true;
             }
 
-            Json::CharReaderBuilder builder;
-            std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
             Json::Value object;
             std::string errors;
-            if (!reader->parse(line.data(), line.data() + line.size(), &object, &errors)) {
+            if (!parseJson(line, object, errors)) {
                 data.error = "Failed to parse Ollama JSON response: " + errors;
                 return false;
             }
@@ -32,15 +77,147 @@ namespace mx {
                     data.error = "Invalid Ollama JSON response: 'response' is not a string";
                     return false;
                 }
-                const std::string text = response.asString();
-                if (data.callback) {
-                    data.callback(text);
-                }
-                data.stream << text;
+                appendText(response.asString(), data);
             }
             return true;
         }
+
+        std::string jsonErrorMessage(const Json::Value& error) {
+            if (error.isString()) {
+                return error.asString();
+            }
+            if (error.isObject() && error["message"].isString()) {
+                return error["message"].asString();
+            }
+            Json::StreamWriterBuilder writer;
+            writer["indentation"] = "";
+            return Json::writeString(writer, error);
+        }
+
+        bool processServerSentEvent(ResponseData& data) {
+            if (data.eventData.empty()) {
+                return true;
+            }
+
+            const std::string event = std::move(data.eventData);
+            data.eventData.clear();
+            if (event == "[DONE]") {
+                return true;
+            }
+
+            Json::Value object;
+            std::string errors;
+            if (!parseJson(event, object, errors)) {
+                data.error = "Failed to parse " + std::string(providerName(data.provider)) +
+                             " streaming event: " + errors;
+                return false;
+            }
+
+            const std::string type = object["type"].asString();
+            if (type == "error") {
+                data.error = std::string(providerName(data.provider)) + " API error: " +
+                             jsonErrorMessage(object["error"]);
+                return false;
+            }
+
+            if (data.provider == Provider::OpenAI) {
+                if (type == "response.output_text.delta" && object["delta"].isString()) {
+                    appendText(object["delta"].asString(), data);
+                } else if (type == "response.failed") {
+                    data.error = "OpenAI API error: " +
+                                 jsonErrorMessage(object["response"]["error"]);
+                    return false;
+                }
+            } else if (data.provider == Provider::Anthropic &&
+                       type == "content_block_delta" &&
+                       object["delta"]["type"].asString() == "text_delta" &&
+                       object["delta"]["text"].isString()) {
+                appendText(object["delta"]["text"].asString(), data);
+            }
+            return true;
+        }
+
+        bool processLine(std::string line, ResponseData& data) {
+            if (!line.empty() && line.back() == '\r') {
+                line.pop_back();
+            }
+            if (data.provider == Provider::Ollama) {
+                return processOllamaLine(line, data);
+            }
+            if (line.empty()) {
+                return processServerSentEvent(data);
+            }
+            if (line.starts_with("data:")) {
+                std::string value = line.substr(5);
+                if (!value.empty() && value.front() == ' ') {
+                    value.erase(0, 1);
+                }
+                if (!data.eventData.empty()) {
+                    data.eventData += '\n';
+                }
+                data.eventData += value;
+            }
+            return true;
+        }
+
+        std::string makeUrl(Provider provider, std::string host) {
+            if (host.find("://") == std::string::npos) {
+                host = (provider == Provider::Ollama ? "http://" : "https://") + host;
+            }
+            while (!host.empty() && host.back() == '/') {
+                host.pop_back();
+            }
+            if (provider == Provider::Ollama) {
+                const size_t schemeEnd = host.find("://");
+                if (host.find(':', schemeEnd + 3) == std::string::npos) {
+                    host += ":11434";
+                }
+                return host + "/api/generate";
+            }
+            if (provider == Provider::OpenAI) {
+                return host + "/v1/responses";
+            }
+            return host + "/v1/messages";
+        }
+
+        std::string makeBody(Provider provider, const std::string& model,
+                             const std::string& prompt, unsigned int maxTokens) {
+            Json::Value request(Json::objectValue);
+            request["model"] = model;
+            request["stream"] = true;
+            if (provider == Provider::Ollama) {
+                request["prompt"] = prompt;
+            } else if (provider == Provider::OpenAI) {
+                request["input"] = prompt;
+            } else {
+                request["max_tokens"] = maxTokens;
+                Json::Value message(Json::objectValue);
+                message["role"] = "user";
+                message["content"] = prompt;
+                request["messages"].append(message);
+            }
+            Json::StreamWriterBuilder writer;
+            writer["indentation"] = "";
+            return Json::writeString(writer, request);
+        }
+
+        void appendHeader(curl_slist*& headers, const std::string& header) {
+            curl_slist* updated = curl_slist_append(headers, header.c_str());
+            if (!updated) {
+                throw ObjectRequestException("Failed to create HTTP headers");
+            }
+            headers = updated;
+        }
     }
+
+    ObjectRequest::ObjectRequest(const std::string& host_, const std::string& model_)
+        : provider(Provider::Ollama), host(host_), model(model_) {}
+
+    ObjectRequest::ObjectRequest(Provider provider_, const std::string& model_,
+                                 const std::string& host_)
+        : provider(provider_),
+          host(host_.empty() ? defaultHost(provider_) : host_),
+          model(model_) {}
 
     size_t ObjectRequest::WriteCallback(void* contents, size_t size, size_t nmemb, ResponseData* data) {
         if (!data) return 0; 
@@ -54,10 +231,7 @@ namespace mx {
         while ((newline = data->pending.find('\n')) != std::string::npos) {
             std::string line = data->pending.substr(0, newline);
             data->pending.erase(0, newline + 1);
-            if (!line.empty() && line.back() == '\r') {
-                line.pop_back();
-            }
-            if (!processResponseLine(line, *data)) {
+            if (!processLine(std::move(line), *data)) {
                 return 0;
             }
         }
@@ -67,7 +241,7 @@ namespace mx {
 
     std::string ObjectRequest::generateTextWithCallback(std::function<void(const std::string&)> callback) {
         if (host.empty() || model.empty() || prompt.empty()) {
-            throw ObjectRequestException("Host, model prompt not set.");
+            throw ObjectRequestException("Host, model, or prompt not set.");
         }
         this->cb = callback;
         std::string response = generateText();   
@@ -76,15 +250,23 @@ namespace mx {
 
     std::string ObjectRequest::generateText() {
         if (host.empty() || model.empty() || prompt.empty()) {
-            throw ObjectRequestException("Host, model prompt not set.");
+            throw ObjectRequestException("Host, model, or prompt not set.");
+        }
+        if (provider == Provider::Anthropic && maxTokens == 0) {
+            throw ObjectRequestException("Anthropic max tokens must be greater than zero.");
         }
 
-        Json::Value request(Json::objectValue);
-        request["model"] = model;
-        request["prompt"] = prompt;
-        Json::StreamWriterBuilder writer;
-        writer["indentation"] = "";
-        const std::string json_data = Json::writeString(writer, request);
+        std::string apiKey;
+        if (provider != Provider::Ollama) {
+            const char* variable = apiKeyEnvironmentVariable(provider);
+            const char* value = std::getenv(variable);
+            if (!value || !*value) {
+                throw ObjectRequestException(std::string(variable) + " environment variable not set.");
+            }
+            apiKey = value;
+        }
+
+        const std::string json_data = makeBody(provider, model, prompt, maxTokens);
 
         
         struct CurlRAII {
@@ -116,20 +298,23 @@ namespace mx {
 
         CurlRAII curl_raii;
         ResponseData response_data;
+        response_data.provider = provider;
         response_data.callback = this->cb;
 
-        if(host.find(":") == std::string::npos) {
-            host += ":11434"; 
-        }
-        std::string url = "http://" + host + "/api/generate";
+        const std::string url = makeUrl(provider, host);
         curl_easy_setopt(curl_raii.curl, CURLOPT_URL, url.c_str());
         
         curl_easy_setopt(curl_raii.curl, CURLOPT_POSTFIELDS, json_data.c_str());
         curl_easy_setopt(curl_raii.curl, CURLOPT_POSTFIELDSIZE, static_cast<long>(json_data.length()));
         
-        curl_raii.headers = curl_slist_append(curl_raii.headers, "Content-Type: application/json");
-        if (!curl_raii.headers) {
-            throw ObjectRequestException("Failed to create HTTP headers");
+        appendHeader(curl_raii.headers, "Content-Type: application/json");
+        if (provider == Provider::OpenAI) {
+            appendHeader(curl_raii.headers, "Accept: text/event-stream");
+            appendHeader(curl_raii.headers, "Authorization: Bearer " + apiKey);
+        } else if (provider == Provider::Anthropic) {
+            appendHeader(curl_raii.headers, "Accept: text/event-stream");
+            appendHeader(curl_raii.headers, "Authorization: Bearer " + apiKey);
+            appendHeader(curl_raii.headers, "anthropic-version: 2023-06-01");
         }
         curl_easy_setopt(curl_raii.curl, CURLOPT_HTTPHEADER, curl_raii.headers);
         curl_easy_setopt(curl_raii.curl, CURLOPT_WRITEFUNCTION, WriteCallback);
@@ -148,8 +333,12 @@ namespace mx {
             throw ObjectRequestException("curl_easy_perform() failed: " + std::string(curl_easy_strerror(res)));
         }
 
-        if (!response_data.pending.empty() &&
-            !processResponseLine(response_data.pending, response_data)) {
+        if (!response_data.pending.empty()) {
+            if (!processLine(std::move(response_data.pending), response_data)) {
+                throw ObjectRequestException(response_data.error);
+            }
+        }
+        if (provider != Provider::Ollama && !processServerSentEvent(response_data)) {
             throw ObjectRequestException(response_data.error);
         }
         
