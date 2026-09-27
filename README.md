@@ -1,22 +1,59 @@
 # ollama_gen
 Query a prompt using Ollama, OpenAI, or Anthropic with libcurl and jsoncpp.
 
-To compile, install the libcurl and jsoncpp development packages, then:
+## Building
+
+Install a C++20 compiler and the libcurl, jsoncpp, and pkg-config development
+packages first.
+
+### Pcons
+
+With [uv](https://docs.astral.sh/uv/) installed, `uvx` downloads and runs the
+Pcons version declared by `pcons-build.py`:
 
 ```bash
-mkdir build && cd build
-cmake ..
-cmake --build .
-sudo cmake --install .
+cd /path/to/ollama_gen
+uvx pcons -B build/pcons --reconfigure
 ```
 
-and after you install the lib you can try the example:
+Run the tests with:
 
 ```bash
-cd example
-mkdir build && cd build
-cmake --build .
-./example "localhost" "codellama:7b" "Hello "
+uvx pcons -B build/pcons test
+```
+
+To stage an installation under the repository's `dist` directory:
+
+```bash
+uvx pcons -B build/pcons all install
+```
+
+For a system or custom prefix, set both the staging prefix and the final prefix
+recorded in the installed pkg-config metadata:
+
+```bash
+uvx pcons -B build/pcons \
+    PCONS_INSTALL_PREFIX=/path/to/prefix \
+    PCONS_FINAL_PREFIX=/path/to/prefix \
+    all install
+```
+
+Use `VARIANT=debug` for a debug build or `TESTS=0` to omit the test program.
+
+### CMake
+
+```bash
+cmake -S . -B build/cmake
+cmake --build build/cmake
+sudo cmake --install build/cmake
+```
+
+After installing the library, you can try the example:
+
+```bash
+cmake -S example -B example/build
+cmake --build example/build
+./example/build/example "localhost" "codellama:7b" "Hello "
 ```
 
 An example program
